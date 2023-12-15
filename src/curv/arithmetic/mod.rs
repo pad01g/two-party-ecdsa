@@ -50,6 +50,7 @@ mod test {
     #[test]
     fn serializes_deserializes() {
         use serde_test::{assert_tokens, Configure, Token::*};
+        use serde_test::Token::Bytes;
         for bigint in [BigInt::zero(), BigInt::sample(1024)] {
             let bytes = bigint.to_bytes();
             let tokens = [Bytes(bytes.leak())];
@@ -60,6 +61,7 @@ mod test {
     #[test]
     fn deserializes_bigint_represented_as_seq() {
         use serde_test::{assert_de_tokens, Configure, Token::*};
+        use serde_test::Token::{SeqEnd, U8, Seq};
 
         let number = BigInt::sample(1024);
         let bytes = number.to_bytes();
@@ -76,6 +78,7 @@ mod test {
     #[test]
     fn serializes_deserializes_in_human_readable_format() {
         use serde_test::{assert_tokens, Configure, Token::*};
+        use serde_test::Token::Str;
 
         let number = BigInt::sample(1024);
         let tokens = [Str(Box::leak(

@@ -46,7 +46,7 @@ mod tests {
     use super::Commitment;
     use super::HashCommitment;
     use super::SECURITY_BITS;
-    use crate::curv::arithmetic::traits::Samplable;
+    use crate::curv::arithmetic::traits::*;
     use crate::curv::arithmetic::BigInt;
     use sha3::{Digest, Sha3_256};
 
@@ -101,11 +101,11 @@ mod tests {
             &message,
             &BigInt::zero(),
         );
-        let message2: Vec<u8> = (&message).into();
+        let message2: Vec<u8> = message.to_bytes();
         digest.update(&message2);
-        let bytes_blinding_factor: Vec<u8> = (&BigInt::zero()).into();
+        let bytes_blinding_factor: Vec<u8> = BigInt::zero().to_bytes();
         digest.update(&bytes_blinding_factor);
-        let hash_result = BigInt::from(digest.finalize().as_ref());
+        let hash_result = BigInt::from_bytes(digest.finalize().as_ref());
         assert_eq!(&commitment, &hash_result);
     }
 }

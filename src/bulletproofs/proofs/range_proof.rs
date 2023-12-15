@@ -381,7 +381,7 @@ pub fn generate_random_point(bytes: &[u8]) -> GE {
 mod tests {
     use crate::bulletproofs::proofs::range_proof::generate_random_point;
     use crate::bulletproofs::proofs::range_proof::RangeProof;
-    use crate::curv::arithmetic::traits::{Converter, Samplable};
+    use crate::curv::arithmetic::traits::*;
     use crate::curv::cryptographic_primitives::hashing::hash_sha512::HSha512;
     use crate::curv::cryptographic_primitives::hashing::traits::*;
     use crate::curv::elliptic::curves::traits::*;
@@ -395,18 +395,18 @@ mod tests {
         let m = 4;
         let nm = n * m;
         let KZen: &[u8] = &[75, 90, 101, 110];
-        let kzen_label = BigInt::from(KZen);
+        let kzen_label = BigInt::from_bytes(KZen);
 
         let G: GE = ECPoint::generator();
         let label = BigInt::from(1);
         let hash = HSha512::create_hash(&[&label]);
-        let H = generate_random_point(&Converter::to_vec(&hash));
+        let H = generate_random_point(&hash.to_bytes());
 
         let g_vec = (0..nm)
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
+                generate_random_point(&hash_i.to_bytes())
             })
             .collect::<Vec<GE>>();
 
@@ -415,7 +415,7 @@ mod tests {
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
+                generate_random_point(&hash_j.to_bytes())
             })
             .collect::<Vec<GE>>();
 
@@ -443,18 +443,18 @@ mod tests {
         let m = 4;
         let nm = n * m;
         let KZen: &[u8] = &[75, 90, 101, 110];
-        let kzen_label = BigInt::from(KZen);
+        let kzen_label = BigInt::from_bytes(KZen);
 
         let G: GE = ECPoint::generator();
         let label = BigInt::from(1);
         let hash = HSha512::create_hash(&[&label]);
-        let H = generate_random_point(&Converter::to_vec(&hash));
+        let H = generate_random_point(&hash.to_bytes());
 
         let g_vec = (0..nm)
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
+                generate_random_point(&hash_i.to_bytes())
             })
             .collect::<Vec<GE>>();
 
@@ -463,7 +463,7 @@ mod tests {
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
+                generate_random_point(&hash_j.to_bytes())
             })
             .collect::<Vec<GE>>();
 
@@ -493,18 +493,18 @@ mod tests {
         let m = 2;
         let nm = n * m;
         let KZen: &[u8] = &[75, 90, 101, 110];
-        let kzen_label = BigInt::from(KZen);
+        let kzen_label = BigInt::from_bytes(KZen);
 
         let G: GE = ECPoint::generator();
         let label = BigInt::from(1);
         let hash = HSha512::create_hash(&[&label]);
-        let H = generate_random_point(&Converter::to_vec(&hash));
+        let H = generate_random_point(&hash.to_bytes());
 
         let g_vec = (0..nm)
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
+                generate_random_point(&hash_i.to_bytes())
             })
             .collect::<Vec<GE>>();
 
@@ -513,7 +513,7 @@ mod tests {
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
+                generate_random_point(&hash_j.to_bytes())
             })
             .collect::<Vec<GE>>();
 
@@ -542,19 +542,19 @@ mod tests {
         let nm = n * m;
         // some seed for generating g and h vectors
         let KZen: &[u8] = &[75, 90, 101, 110];
-        let kzen_label = BigInt::from(KZen);
+        let kzen_label = BigInt::from_bytes(KZen);
 
         // G,H - points for pederson commitment: com  = vG + rH
         let G: GE = ECPoint::generator();
         let label = BigInt::from(1);
         let hash = HSha512::create_hash(&[&label]);
-        let H = generate_random_point(&Converter::to_vec(&hash));
+        let H = generate_random_point(&hash.to_bytes());
 
         let g_vec = (0..nm)
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
+                generate_random_point(&hash_i.to_bytes())
             })
             .collect::<Vec<GE>>();
 
@@ -563,7 +563,7 @@ mod tests {
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
+                generate_random_point(&hash_j.to_bytes())
             })
             .collect::<Vec<GE>>();
 

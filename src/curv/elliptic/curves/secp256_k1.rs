@@ -576,21 +576,21 @@ mod tests {
     fn serialize_rand_pk_verify_pad() {
         let vx = BigInt::from_hex(
             &"ccaf75ab7960a01eb421c0e2705f6e84585bd0a094eb6af928c892a4a2912508".to_string(),
-        );
+        ).unwrap();
 
         let vy = BigInt::from_hex(
             &"e788e294bd64eee6a73d2fc966897a31eb370b7e8e9393b0d8f4f820b48048df".to_string(),
-        );
+        ).unwrap();
 
         Secp256k1Point::from_coor(&vx, &vy); // x and y of size 32
 
         let x = BigInt::from_hex(
             &"5f6853305467a385b56a5d87f382abb52d10835a365ec265ce510e04b3c3366f".to_string(),
-        );
+        ).unwrap();
 
         let y = BigInt::from_hex(
             &"b868891567ca1ee8c44706c0dc190dd7779fe6f9b92ced909ad870800451e3".to_string(),
-        );
+        ).unwrap();
 
         Secp256k1Point::from_coor(&x, &y); // x and y not of size 32 each
 
@@ -656,7 +656,7 @@ mod tests {
     fn test_from_bytes() {
         let g = Secp256k1Point::generator();
         let hash = HSha256::create_hash(&[&g.bytes_compressed_to_big_int()]);
-        let hash_vec = BigInt::to_vec(&hash);
+        let hash_vec = hash.to_bytes();
         let result = Secp256k1Point::from_bytes(&hash_vec);
         assert_eq!(result.unwrap_err(), ErrorKey::InvalidPublicKey)
     }
@@ -667,7 +667,7 @@ mod tests {
         let hash = HSha256::create_hash(&[&g.bytes_compressed_to_big_int()]);
         let hash = HSha256::create_hash(&[&hash]);
         let hash = HSha256::create_hash(&[&hash]);
-        let hash_vec = BigInt::to_vec(&hash);
+        let hash_vec = hash.to_bytes();
         let result = Secp256k1Point::from_bytes(&hash_vec);
         let ground_truth = Secp256k1Point::base_point2();
         assert_eq!(result.unwrap(), ground_truth);
@@ -726,7 +726,7 @@ mod tests {
         let a: FE = ECScalar::new_random();
         let a_bn = a.to_big_int();
         let a_inv = a.invert();
-        let a_inv_bn_1 = a_bn.invert(&FE::q()).unwrap();
+        let a_inv_bn_1 = BigInt::mod_inv(&a_bn, &FE::q()).unwrap();
         let a_inv_bn_2 = a_inv.to_big_int();
         assert_eq!(a_inv_bn_1, a_inv_bn_2);
     }

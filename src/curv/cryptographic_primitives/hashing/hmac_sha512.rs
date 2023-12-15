@@ -31,8 +31,7 @@ impl KeyedHash for HMacSha512 {
 mod tests {
 
     use super::HMacSha512;
-    use crate::curv::arithmetic::traits::Converter;
-    use crate::curv::arithmetic::traits::Samplable;
+    use crate::curv::arithmetic::traits::*;
     use crate::curv::cryptographic_primitives::hashing::traits::KeyedHash;
     use crate::curv::arithmetic::BigInt;
 

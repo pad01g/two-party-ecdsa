@@ -48,7 +48,7 @@ use crate::curv::GE;
 
 use crate::Error::{self, InvalidSig};
 
-//use wasm_bindgen::prelude::*;
+use wasm_bindgen::prelude::*;
 
 //****************** Begin: Party One structs ******************//
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -239,6 +239,11 @@ impl KeyGenSecondMsg {
     }
 }
 
+#[wasm_bindgen]
+pub fn greet(name: &str) {
+    let x = (&format!("Hello, {}!", name));
+}
+
 pub fn compute_pubkey(party_one_private: &Party1Private, other_share_public_share: &GE) -> GE {
     other_share_public_share * &party_one_private.x1
 }
@@ -265,7 +270,6 @@ impl Party1Private {
 }
 
 impl PaillierKeyPair {
-    //#[wasm_bindgen]
     pub fn generate_keypair_and_encrypted_share(keygen: &EcKeyPair) -> PaillierKeyPair {
         let (ek, dk) = Paillier::keypair().keys();
         let randomness = Randomness::sample(&ek);

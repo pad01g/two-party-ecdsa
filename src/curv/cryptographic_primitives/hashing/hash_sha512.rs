@@ -41,7 +41,7 @@ impl Hash for HSha512 {
 mod tests {
     use super::HSha512;
     use super::Hash;
-    use crate::curv::arithmetic::traits::Converter;
+    use crate::curv::arithmetic::traits::*;
     use crate::curv::elliptic::curves::traits::ECPoint;
     use crate::curv::elliptic::curves::traits::ECScalar;
     use crate::curv::arithmetic::BigInt;
