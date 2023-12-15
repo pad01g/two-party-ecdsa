@@ -5,7 +5,7 @@
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
 
-use crate::curv::BigInt;
+use crate::curv::arithmetic::BigInt;
 use crate::curv::{FE, GE};
 
 pub trait Hash {

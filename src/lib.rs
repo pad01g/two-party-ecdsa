@@ -31,7 +31,9 @@ mod test;
 pub use crate::centipede::juggling::proof_system::{Helgamal, Helgamalsegmented, Witness};
 pub use crate::curv::cryptographic_primitives::proofs::{sigma_ec_ddh::ECDDHProof, ProofError};
 pub use crate::curv::elliptic::curves::secp256_k1::{Secp256k1Point, Secp256k1Scalar};
-pub use crate::curv::{elliptic::curves::traits::ECPoint, BigInt, FE, GE};
+pub use crate::curv::{elliptic::curves::traits::ECPoint, FE, GE};
+pub use crate::curv::arithmetic::BigInt;
+
 pub use crate::paillier::{
     traits::*, DecryptionKey, EncryptionKey, Paillier, RawCiphertext, RawPlaintext,
 };

@@ -1,6 +1,7 @@
 pub mod bigint {
 
-    use crate::curv::BigInt;
+    use crate::curv::arithmetic::traits::*;
+    use crate::curv::arithmetic::BigInt;
     use serde::{de, ser};
     use std::fmt;
 
@@ -19,7 +20,7 @@ pub mod bigint {
             }
 
             fn visit_str<E: de::Error>(self, s: &str) -> Result<BigInt, E> {
-                let v: BigInt = str::parse(s).map_err(de::Error::custom)?;
+                let v: BigInt = BigInt::from_str_radix(s, 10).map_err(de::Error::custom)?;
                 Ok(v)
             }
         }

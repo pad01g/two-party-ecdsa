@@ -16,7 +16,7 @@
 use super::range_proof::RangeProof;
 use super::range_proof::RangeProofTrait;
 use super::range_proof::{ChallengeBits, EncryptedPairs, Proof};
-use crate::curv::BigInt;
+use crate::curv::arithmetic::BigInt;
 use crate::paillier::EncryptionKey;
 use std::error::Error;
 use std::fmt;

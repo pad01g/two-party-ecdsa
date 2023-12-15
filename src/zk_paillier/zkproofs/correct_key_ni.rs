@@ -17,7 +17,7 @@ use std::iter;
 use std::ops::Shl;
 
 use crate::curv::arithmetic::traits::*;
-use crate::curv::BigInt;
+use crate::curv::arithmetic::BigInt;
 use crate::paillier::{extract_nroot, DecryptionKey, EncryptionKey};
 use rayon::prelude::*;
 // This protocol is based on the NIZK protocol in https://eprint.iacr.org/2018/057.pdf
@@ -43,7 +43,7 @@ impl NICorrectKeyProof {
         let dk_n = &dk.q * &dk.p;
         let key_length = &dk_n.bit_length();
 
-        let salt_bn = BigInt::from(SALT_STRING);
+        let salt_bn = BigInt::from_bytes(SALT_STRING);
 
         // TODO: use flatten (Morten?)
         let rho_vec = (0..M2)
@@ -53,7 +53,7 @@ impl NICorrectKeyProof {
                         .chain(iter::once(&salt_bn))
                         .chain(iter::once(&BigInt::from(i as u32))),
                 );
-                let seed_bn = BigInt::from(&seed[..]);
+                let seed_bn = BigInt::from_bytes(&seed[..]);
                 mask_generation(key_length, &seed_bn) % &dk_n
             })
             .collect::<Vec<BigInt>>();
@@ -67,7 +67,7 @@ impl NICorrectKeyProof {
 
     pub fn verify(&self, ek: &EncryptionKey) -> Result<(), CorrectKeyProofError> {
         let key_length = ek.n.bit_length() as usize;
-        let salt_bn = BigInt::from(SALT_STRING);
+        let salt_bn = BigInt::from_bytes(SALT_STRING);
 
         let rho_vec = (0..M2)
             .map(|i| {
@@ -76,11 +76,11 @@ impl NICorrectKeyProof {
                         .chain(iter::once(&salt_bn))
                         .chain(iter::once(&BigInt::from(i as u32))),
                 );
-                let seed_bn = BigInt::from(&seed[..]);
+                let seed_bn = BigInt::from_bytes(&seed[..]);
                 mask_generation(&key_length, &seed_bn) % &ek.n
             })
             .collect::<Vec<BigInt>>();
-        let alpha_primorial: BigInt = str::parse(P).unwrap();
+        let alpha_primorial: BigInt = BigInt::from_str_radix(P, 10).unwrap();
         let gcd_test = alpha_primorial.gcd(&ek.n);
 
         let derived_rho_vec = (0..M2)
@@ -104,7 +104,7 @@ fn mask_generation(out_length: &usize, seed: &BigInt) -> BigInt {
         .map(|j| {
             let digest =
                 super::compute_digest(iter::once(seed).chain(iter::once(&BigInt::from(j as u32))));
-            BigInt::from(&digest[..])
+            BigInt::from_bytes(&digest[..])
             // concat elements of  msklen_hash_vec to one long element
         })
         .collect::<Vec<BigInt>>();

@@ -19,7 +19,7 @@ use crate::curv::cryptographic_primitives::commitments::traits::Commitment;
 use crate::curv::cryptographic_primitives::proofs::sigma_dlog::*;
 use crate::curv::cryptographic_primitives::proofs::ProofError;
 use crate::curv::elliptic::curves::traits::*;
-use crate::curv::BigInt;
+use crate::curv::arithmetic::BigInt;
 use crate::curv::FE;
 use crate::curv::GE;
 

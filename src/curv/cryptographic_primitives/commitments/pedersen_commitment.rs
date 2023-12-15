@@ -10,7 +10,8 @@ use super::SECURITY_BITS;
 use crate::curv::arithmetic::traits::Samplable;
 
 use crate::curv::elliptic::curves::traits::*;
-use crate::curv::{BigInt, FE, GE};
+use crate::curv::{FE, GE};
+use crate::curv::arithmetic::BigInt;
 
 /// compute c = mG + rH
 /// where m is the commited value, G is the group generator,

@@ -18,11 +18,11 @@ version 3 of the License, or (at your option) any later version.
 // based on the paper: https://eprint.iacr.org/2017/1066.pdf
 use super::inner_product::InnerProductArg;
 use crate::bulletproofs::Errors::{self, RangeProofError};
-use crate::curv::arithmetic::traits::{Converter, Modulo};
+use crate::curv::arithmetic::traits::{Converter, Modulo, Zero, One};
 use crate::curv::cryptographic_primitives::hashing::hash_sha256::HSha256;
 use crate::curv::cryptographic_primitives::hashing::traits::*;
 use crate::curv::elliptic::curves::traits::*;
-use crate::curv::BigInt;
+use crate::curv::arithmetic::BigInt;
 use crate::curv::{FE, GE};
 use itertools::iterate;
 use std::ops::{Shl, Shr};
@@ -83,7 +83,7 @@ impl RangeProof {
         let secret_bits = (0..nm)
             .map(|i| {
                 let bignum_bit: BigInt = aL[i].clone() & BigInt::one();
-                let byte = BigInt::to_vec(&bignum_bit);
+                let byte = bignum_bit.to_bytes();
                 byte[0] == 1
             })
             .collect::<Vec<bool>>();
@@ -370,9 +370,9 @@ impl RangeProof {
 pub fn generate_random_point(bytes: &[u8]) -> GE {
     ECPoint::from_bytes(bytes).unwrap_or_else(|_| {
         let two = BigInt::from(2);
-        let bn = BigInt::from(bytes);
+        let bn = BigInt::from_bytes(bytes);
         let bn_times_two = BigInt::mod_mul(&bn, &two, &FE::q());
-        let bytes = BigInt::to_vec(&bn_times_two);
+        let bytes = bn_times_two.to_bytes();
         generate_random_point(&bytes)
     })
 }
@@ -385,7 +385,7 @@ mod tests {
     use crate::curv::cryptographic_primitives::hashing::hash_sha512::HSha512;
     use crate::curv::cryptographic_primitives::hashing::traits::*;
     use crate::curv::elliptic::curves::traits::*;
-    use crate::curv::BigInt;
+    use crate::curv::arithmetic::BigInt;
     use crate::curv::{FE, GE};
 
     #[test]

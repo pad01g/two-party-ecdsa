@@ -5,7 +5,7 @@
     License MIT: https://github.com/KZen-networks/curv/blob/master/LICENSE
 */
 
-use crate::curv::BigInt;
+use crate::curv::arithmetic::BigInt;
 
 use super::traits::KeyedHash;
 use crate::curv::arithmetic::traits::Converter;
@@ -16,14 +16,14 @@ pub struct HMacSha512;
 
 impl KeyedHash for HMacSha512 {
     fn create_hmac(key: &BigInt, data: &[&BigInt]) -> BigInt {
-        let mut key_bytes: Vec<u8> = key.into();
+        let mut key_bytes: Vec<u8> = key.to_bytes();
 
         let mut ctx = Hmac::<Sha512>::new_from_slice(&key_bytes).expect("HMAC can take key of any size");
         for value in data {
-            ctx.update(&BigInt::to_vec(value));
+            ctx.update(&value.to_bytes());
         }
         key_bytes.zeroize();
-        BigInt::from(ctx.finalize().into_bytes().as_ref())
+        BigInt::from_bytes(ctx.finalize().into_bytes().as_ref())
     }
 }
 
@@ -34,7 +34,7 @@ mod tests {
     use crate::curv::arithmetic::traits::Converter;
     use crate::curv::arithmetic::traits::Samplable;
     use crate::curv::cryptographic_primitives::hashing::traits::KeyedHash;
-    use crate::curv::BigInt;
+    use crate::curv::arithmetic::BigInt;
 
     #[test]
     fn create_hmac_test() {

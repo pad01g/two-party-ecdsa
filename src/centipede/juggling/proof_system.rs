@@ -15,7 +15,7 @@ version 3 of the License, or (at your option) any later version.
 @license GPL-3.0+ <https://github.com/KZen-networks/centipede/blob/master/LICENSE>
 */
 
-use crate::curv::{FE,GE,BigInt};
+use crate::curv::{FE,GE};
 use crate::curv::cryptographic_primitives::proofs::sigma_correct_homomorphic_elgamal_encryption_of_dlog::{HomoELGamalDlogProof,HomoElGamalDlogWitness,HomoElGamalDlogStatement};
 use crate::curv::cryptographic_primitives::proofs::sigma_correct_homomorphic_elgamal_enc::{HomoELGamalProof,HomoElGamalWitness,HomoElGamalStatement};
 use crate::curv::cryptographic_primitives::hashing::hash_sha512::HSha512;
@@ -24,6 +24,7 @@ use crate::curv::arithmetic::traits::Converter;
 use crate::bulletproofs::proofs::range_proof::{RangeProof,generate_random_point};
 use super::segmentation::Msegmentation;
 use crate::centipede::Errors::{self, ErrorProving};
+use crate::curv::arithmetic::BigInt;
 
 #[derive(Serialize, Deserialize)]
 pub struct Helgamal {
@@ -66,13 +67,13 @@ impl Proof {
         let nm = n * m;
         // some seed for generating g and h vectors
         let KZen: &[u8] = &[75, 90, 101, 110];
-        let kzen_label = BigInt::from(KZen);
+        let kzen_label = BigInt::from_bytes(KZen);
 
         let g_vec = (0..nm)
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
+                generate_random_point(&hash_i.to_bytes())
             })
             .collect::<Vec<GE>>();
 
@@ -81,7 +82,7 @@ impl Proof {
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
+                generate_random_point(&hash_j.to_bytes())
             })
             .collect::<Vec<GE>>();
 
@@ -148,13 +149,13 @@ impl Proof {
         let nm = n * m;
         // some seed for generating g and h vectors
         let KZen: &[u8] = &[75, 90, 101, 110];
-        let kzen_label = BigInt::from(KZen);
+        let kzen_label = BigInt::from_bytes(KZen);
 
         let g_vec = (0..nm)
             .map(|i| {
                 let kzen_label_i = BigInt::from(i as u32) + &kzen_label;
                 let hash_i = HSha512::create_hash(&[&kzen_label_i]);
-                generate_random_point(&Converter::to_vec(&hash_i))
+                generate_random_point(&hash_i.to_bytes())
             })
             .collect::<Vec<GE>>();
 
@@ -163,7 +164,7 @@ impl Proof {
             .map(|i| {
                 let kzen_label_j = BigInt::from(n as u32) + BigInt::from(i as u32) + &kzen_label;
                 let hash_j = HSha512::create_hash(&[&kzen_label_j]);
-                generate_random_point(&Converter::to_vec(&hash_j))
+                generate_random_point(&hash_j.to_bytes())
             })
             .collect::<Vec<GE>>();
 

@@ -8,7 +8,7 @@
 use super::traits::Hash;
 use crate::curv::arithmetic::traits::Converter;
 use crate::curv::elliptic::curves::traits::{ECPoint, ECScalar};
-use crate::curv::BigInt;
+use crate::curv::arithmetic::BigInt;
 use crate::curv::{FE, GE};
 use sha2::{Digest, Sha512};
 
@@ -19,10 +19,10 @@ impl Hash for HSha512 {
         let mut digest = Sha512::new();
 
         for value in big_ints {
-            digest.update(&BigInt::to_vec(value));
+            digest.update(&value.to_bytes());
         }
 
-        BigInt::from(digest.finalize().as_ref())
+        BigInt::from_bytes(digest.finalize().as_ref())
     }
 
     fn create_hash_from_ge(ge_vec: &[&GE]) -> FE {
@@ -32,7 +32,7 @@ impl Hash for HSha512 {
             digest.update(&value.pk_to_key_slice());
         }
 
-        let result = BigInt::from(digest.finalize().as_ref());
+        let result = BigInt::from_bytes(digest.finalize().as_ref());
         ECScalar::from(&result)
     }
 }
@@ -44,7 +44,7 @@ mod tests {
     use crate::curv::arithmetic::traits::Converter;
     use crate::curv::elliptic::curves::traits::ECPoint;
     use crate::curv::elliptic::curves::traits::ECScalar;
-    use crate::curv::BigInt;
+    use crate::curv::arithmetic::BigInt;
     use crate::curv::{GE, SK};
     use crate::Secp256k1Scalar;
 

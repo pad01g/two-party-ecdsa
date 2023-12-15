@@ -7,10 +7,11 @@ use serde::*;
 
 use super::traits::*;
 use super::{
-    BigInt, DecryptionKey, EncryptionKey, Keypair, MinimalDecryptionKey, MinimalEncryptionKey,
+    DecryptionKey, EncryptionKey, Keypair, MinimalDecryptionKey, MinimalEncryptionKey,
     Paillier, RawCiphertext, RawPlaintext,
 };
 use crate::curv::arithmetic::traits::*;
+use crate::curv::arithmetic::BigInt;
 
 impl Keypair {
     /// Generate default encryption and decryption keys.
@@ -237,7 +238,7 @@ impl<'m, 'd> Encrypt<DecryptionKey, RawPlaintext<'m>, RawCiphertext<'d>> for Pai
         let dk_pp = &dk.p * &dk.p;
         let dk_qq = &dk.q * &dk.q;
         let dk_n = &dk.q * &dk.p;
-        let dk_ppinv = BigInt::mod_inv(&dk_pp, &dk_qq);
+        let dk_ppinv = BigInt::mod_inv(&dk_pp, &dk_qq).unwrap();
         let (mp, mq) = crt_decompose(m.0.borrow(), &dk_pp, &dk_qq);
         let (cp, cq) = join(
             || {
@@ -270,7 +271,7 @@ impl<'m, 'r, 'd>
         let dk_pp = &dk.p * &dk.p;
         let dk_qq = &dk.q * &dk.q;
         let dk_n = &dk.q * &dk.p;
-        let dk_ppinv = BigInt::mod_inv(&dk_pp, &dk_qq);
+        let dk_ppinv = BigInt::mod_inv(&dk_pp, &dk_qq).unwrap();
         let (mp, mq) = crt_decompose(m.0.borrow(), &dk_pp, &dk_qq);
         let (rp, rq) = crt_decompose(&r.0, &dk_pp, &dk_qq);
         let (cp, cq) = join(
@@ -346,7 +347,7 @@ impl<'c, 'm> Decrypt<DecryptionKey, &'c RawCiphertext<'c>, RawPlaintext<'m>> for
         let dk_qq = &dk.q * &dk.q;
         let dk_pp = &dk.p * &dk.p;
         let dk_n = &dk.p * &dk.q;
-        let dk_pinv = BigInt::mod_inv(&dk.p, &dk.q);
+        let dk_pinv = BigInt::mod_inv(&dk.p, &dk.q).unwrap();
         let dk_qminusone = &dk.q - BigInt::one();
         let dk_pminusone = &dk.p - BigInt::one();
         let dk_hp = h(&dk.p, &dk_pp, &dk_n);
@@ -462,7 +463,7 @@ fn h(p: &BigInt, pp: &BigInt, n: &BigInt) -> BigInt {
     // compute L_p(.)
     let lp = l(&gp, p);
     // compute L_p(.)^{-1}
-    BigInt::mod_inv(&lp, p)
+    BigInt::mod_inv(&lp, p).unwrap()
 }
 
 fn l(u: &BigInt, n: &BigInt) -> BigInt {
@@ -500,12 +501,12 @@ where
 pub fn extract_nroot(dk: &DecryptionKey, z: &BigInt) -> BigInt {
     let dk_n = &dk.p * &dk.q;
 
-    let dk_pinv = BigInt::mod_inv(&dk.p, &dk.q);
+    let dk_pinv = BigInt::mod_inv(&dk.p, &dk.q).unwrap();
     let dk_qminusone = &dk.q - BigInt::one();
     let dk_pminusone = &dk.p - BigInt::one();
 
     let dk_phi = &dk_pminusone * &dk_qminusone;
-    let dk_dn = BigInt::mod_inv(&dk_n, &dk_phi);
+    let dk_dn = BigInt::mod_inv(&dk_n, &dk_phi).unwrap();
     let (dk_dp, dk_dq) = crt_decompose(dk_dn, &dk_pminusone, &dk_qminusone);
     let (zp, zq) = crt_decompose(z, &dk.p, &dk.q);
 

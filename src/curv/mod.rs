@@ -17,7 +17,7 @@ mod secp256k1instance {
 pub use self::secp256k1instance::*;
 
 pub mod arithmetic;
-pub use arithmetic::big_gmp::BigInt;
+pub use arithmetic::BigInt;
 
 pub mod cryptographic_primitives;
 

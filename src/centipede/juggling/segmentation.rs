@@ -18,9 +18,11 @@ const SECRETBITS: usize = 256;
 use super::proof_system::{Helgamal, Helgamalsegmented, Witness};
 use crate::centipede::Errors::{self, ErrorDecrypting};
 use crate::curv::elliptic::curves::traits::*;
-use crate::curv::{BigInt, FE, GE};
+use crate::curv::{FE, GE};
 use rayon::prelude::*;
 use std::ops::{Shl, Shr};
+use crate::curv::arithmetic::BigInt;
+use crate::curv::arithmetic::traits::*;
 
 pub struct Msegmentation;
 
@@ -31,8 +33,8 @@ impl Msegmentation {
         let msb = segment_size_u32 * (k as u32 + 1);
         let lsb = segment_size_u32 * k as u32;
         let two_bn = BigInt::from(2);
-        let max = BigInt::pow(&two_bn, msb) - BigInt::from(1);
-        let min = BigInt::pow(&two_bn, lsb) - BigInt::from(1);
+        let max = two_bn.pow(msb) - BigInt::from(1);
+        let min = two_bn.pow(lsb) - BigInt::from(1);
         let mask = max - min;
         let segment_k_bn = mask & ss_bn;
         let segment_k_bn_rotated = BigInt::shr(segment_k_bn, (k * (*segment_size) as u8) as usize);

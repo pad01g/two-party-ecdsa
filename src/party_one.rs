@@ -41,11 +41,14 @@ use crate::party_two::{
 use crate::centipede::juggling::proof_system::{Helgamalsegmented, Witness};
 use crate::centipede::juggling::segmentation::Msegmentation;
 
-use crate::curv::BigInt;
+use crate::curv::arithmetic::traits::*;
+use crate::curv::arithmetic::BigInt;
 use crate::curv::FE;
 use crate::curv::GE;
 
 use crate::Error::{self, InvalidSig};
+
+//use wasm_bindgen::prelude::*;
 
 //****************** Begin: Party One structs ******************//
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -262,6 +265,7 @@ impl Party1Private {
 }
 
 impl PaillierKeyPair {
+    //#[wasm_bindgen]
     pub fn generate_keypair_and_encrypted_share(keygen: &EcKeyPair) -> PaillierKeyPair {
         let (ek, dk) = Paillier::keypair().keys();
         let randomness = Randomness::sample(&ek);
@@ -428,10 +432,9 @@ impl Signature {
         r = r.scalar_mul(&ephemeral_local_share.secret_share.get_element());
 
         let rx = r.x_coor().unwrap().mod_floor(&FE::q());
-        let k1_inv = &ephemeral_local_share
+        let k1_inv = &BigInt::mod_inv(&ephemeral_local_share
             .secret_share
-            .to_big_int()
-            .invert(&FE::q())
+            .to_big_int(), &FE::q())
             .unwrap();
         let s_tag = Paillier::decrypt(
             &party_one_private.paillier_priv,
@@ -454,10 +457,9 @@ impl Signature {
 
         let rx = r.x_coor().unwrap().mod_floor(&FE::q());
         let ry = r.y_coor().unwrap().mod_floor(&FE::q());
-        let k1_inv = &ephemeral_local_share
+        let k1_inv = &BigInt::mod_inv(&ephemeral_local_share
             .secret_share
-            .to_big_int()
-            .invert(&FE::q())
+            .to_big_int(), &FE::q())
             .unwrap();
         let s_tag = Paillier::decrypt(
             &party_one_private.paillier_priv,
@@ -472,7 +474,7 @@ impl Signature {
          1. id = R.y & 1
          2. if (s > curve.q / 2) id = id ^ 1
         */
-        let is_ry_odd = ry.tstbit(0);
+        let is_ry_odd = ry.test_bit(0);
         let mut recid = if is_ry_odd { 1 } else { 0 };
         if s_tag_tag > (FE::q() - &s_tag_tag) {
             recid ^= 1;
@@ -492,8 +494,8 @@ pub fn verify(signature: &Signature, pubkey: &GE, message: &BigInt) -> Result<()
     let u2 = *pubkey * rx_fe * s_inv_fe;
 
     // second condition is against malleability
-    let rx_bytes = &BigInt::to_vec(&signature.r)[..];
-    let u1_plus_u2_bytes = &BigInt::to_vec(&(u1 + u2).x_coor().unwrap())[..];
+    let rx_bytes = &signature.r.to_bytes()[..];
+    let u1_plus_u2_bytes = &(u1 + u2).x_coor().unwrap().to_bytes()[..];
 
     if rx_bytes == u1_plus_u2_bytes && signature.s < FE::q() - signature.s.clone() {
         Ok(())

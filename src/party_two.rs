@@ -30,7 +30,7 @@ use super::party_one::{
     PDLFirstMessage as Party1PDLFirstMessage, PDLSecondMessage as Party1PDLSecondMessage,
 };
 use crate::curv::elliptic::curves::secp256_k1::Secp256k1Point;
-use crate::curv::BigInt;
+use crate::curv::arithmetic::BigInt;
 use crate::curv::FE;
 use crate::curv::GE;
 use crate::paillier::traits::{Add, Encrypt, Mul};
@@ -399,10 +399,9 @@ impl PartialSig {
 
         let rx = r.x_coor().unwrap().mod_floor(&q);
         let rho = BigInt::sample_below(&q.pow(2));
-        let k2_inv = ephemeral_local_share
+        let k2_inv = BigInt::mod_inv(&(ephemeral_local_share
             .secret_share
-            .to_big_int()
-            .invert(&q)
+            .to_big_int()),&q)
             .unwrap();
         let partial_sig = rho * &q + BigInt::mod_mul(&k2_inv, message, &q);
         let c1 = Paillier::encrypt(ek, RawPlaintext::from(partial_sig));

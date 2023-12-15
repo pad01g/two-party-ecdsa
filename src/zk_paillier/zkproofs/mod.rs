@@ -27,7 +27,8 @@ mod correct_message;
 pub use self::correct_message::CorrectMessageProof;
 pub use self::correct_message::CorrectMessageProofError;
 
-use crate::curv::BigInt;
+use crate::curv::arithmetic::traits::*;
+use crate::curv::arithmetic::BigInt;
 use sha2::{Digest, Sha256};
 use std::borrow::Borrow;
 
@@ -38,7 +39,7 @@ where
 {
     let mut digest = Sha256::new();
     for value in values {
-        let bytes: Vec<u8> = value.borrow().into();
+        let bytes: Vec<u8> = value.borrow().to_owned().to_bytes();
         digest.update(bytes);
     }
     digest.finalize().to_vec()

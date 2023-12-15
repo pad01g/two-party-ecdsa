@@ -5,7 +5,7 @@ mod tests {
 
     use crate::curv::arithmetic::traits::Samplable;
     use crate::curv::elliptic::curves::traits::*;
-    use crate::curv::BigInt;
+    use crate::curv::arithmetic::BigInt;
     use crate::*;
 
     #[test]

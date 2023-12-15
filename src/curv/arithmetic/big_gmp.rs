@@ -1,5 +1,3 @@
-// #![cfg(feature="gmp")]
-
 /*
     Curv
 
@@ -16,256 +14,378 @@
     @license GPL-3.0+ <https://github.com/KZen-networks/curv/blob/master/LICENSE>
 */
 
-use super::traits::{
-    BitManipulation, ConvertFrom, Converter, Modulo, NumberTests, Samplable, EGCD,
-};
+use std::convert::{TryFrom, TryInto};
+use std::sync::atomic;
+use std::{fmt, ops, ptr};
+
 use gmp::mpz::Mpz;
-use rand::RngCore;
+use gmp::sign::Sign;
+use num_traits::{One, Zero};
+use zeroize::Zeroize;
 
-use std::borrow::Borrow;
+use super::errors::*;
+use super::traits::*;
 
-pub type BigInt = Mpz;
+type BN = Mpz;
 
-impl Converter for Mpz {
-    fn to_vec(value: &Mpz) -> Vec<u8> {
-        let bytes: Vec<u8> = value.borrow().into();
-        bytes
+/// Big integer
+///
+/// Wraps underlying BigInt implementation (either GMP bindings or num-bigint), exposes only
+/// very limited API that allows easily switching between implementations.
+///
+/// Set of traits implemented on BigInt remains the same regardless of underlying implementation.
+#[derive(PartialOrd, PartialEq, Ord, Eq, Clone)]
+pub struct BigInt {
+    gmp: Mpz,
+}
+
+impl BigInt {
+    fn inner_ref(&self) -> &Mpz {
+        &self.gmp
+    }
+    fn inner_mut(&mut self) -> &mut Mpz {
+        &mut self.gmp
+    }
+    fn into_inner(self) -> Mpz {
+        self.gmp
+    }
+}
+
+#[allow(deprecated)]
+impl ZeroizeBN for BigInt {
+    fn zeroize_bn(&mut self) {
+        unsafe { ptr::write_volatile(&mut self.gmp, Mpz::zero()) };
+        atomic::fence(atomic::Ordering::SeqCst);
+        atomic::compiler_fence(atomic::Ordering::SeqCst);
+    }
+}
+
+impl Zeroize for BigInt {
+    fn zeroize(&mut self) {
+        unsafe { ptr::write_volatile(&mut self.gmp, Mpz::zero()) };
+        atomic::fence(atomic::Ordering::SeqCst);
+        atomic::compiler_fence(atomic::Ordering::SeqCst);
+    }
+}
+
+impl Converter for BigInt {
+    fn to_bytes(&self) -> Vec<u8> {
+        (&self.gmp).into()
+    }
+
+    fn from_bytes(bytes: &[u8]) -> Self {
+        Mpz::from(bytes).wrap()
     }
 
     fn to_hex(&self) -> String {
-        self.to_str_radix(super::HEX_RADIX)
+        self.gmp.to_str_radix(16)
     }
 
-    fn from_hex(value: &str) -> Mpz {
-        BigInt::from_str_radix(value, super::HEX_RADIX).expect("Error in serialization")
+    fn from_hex(value: &str) -> Result<BigInt, ParseBigIntError> {
+        Mpz::from_str_radix(value, 16)
+            .map(Wrap::wrap)
+            .map_err(|e| ParseBigIntError {
+                reason: ParseErrorReason::Gmp(e),
+                radix: 16,
+            })
+    }
+
+    fn to_str_radix(&self, radix: u8) -> String {
+        self.gmp.to_str_radix(radix)
+    }
+
+    fn from_str_radix(str: &str, radix: u8) -> Result<Self, ParseBigIntError> {
+        Mpz::from_str_radix(str, radix)
+            .map(Wrap::wrap)
+            .map_err(|e| ParseBigIntError {
+                reason: ParseErrorReason::Gmp(e),
+                radix: radix.into(),
+            })
     }
 }
 
-// TODO: write unit test
-impl Modulo for Mpz {
+impl num_traits::Num for BigInt {
+    type FromStrRadixErr = ParseBigIntError;
+    fn from_str_radix(str: &str, radix: u32) -> Result<Self, ParseBigIntError> {
+        <Self as Converter>::from_str_radix(str, radix.try_into().unwrap())
+    }
+}
+
+impl BasicOps for BigInt {
+    fn pow(&self, exponent: u32) -> Self {
+        self.gmp.pow(exponent).wrap()
+    }
+
+    fn mul(&self, other: &Self) -> Self {
+        self * other
+    }
+
+    fn sub(&self, other: &Self) -> Self {
+        self - other
+    }
+
+    fn add(&self, other: &Self) -> Self {
+        self + other
+    }
+
+    fn abs(&self) -> Self {
+        self.gmp.abs().wrap()
+    }
+}
+
+impl Primes for BigInt {
+    fn next_prime(&self) -> Self {
+        self.gmp.nextprime().wrap()
+    }
+
+    fn is_probable_prime(&self, n: u32) -> bool {
+        use gmp::mpz::ProbabPrimeResult::*;
+        match self.gmp.probab_prime(n as i32) {
+            Prime | ProbablyPrime => true,
+            NotPrime => false,
+        }
+    }
+}
+
+impl Modulo for BigInt {
     fn mod_pow(base: &Self, exponent: &Self, modulus: &Self) -> Self {
-        base.powm(exponent, modulus)
+        assert!(exponent >= &BigInt::zero(), "exponent must be non-negative");
+        base.gmp.powm(&exponent.gmp, &modulus.gmp).wrap()
     }
 
     fn mod_mul(a: &Self, b: &Self, modulus: &Self) -> Self {
-        (a.mod_floor(modulus) * b.mod_floor(modulus)).mod_floor(modulus)
+        (a.gmp.mod_floor(&modulus.gmp) * b.gmp.mod_floor(&modulus.gmp))
+            .mod_floor(&modulus.gmp)
+            .wrap()
     }
 
     fn mod_sub(a: &Self, b: &Self, modulus: &Self) -> Self {
-        let a_m = a.mod_floor(modulus);
-        let b_m = b.mod_floor(modulus);
+        let a_m = a.gmp.mod_floor(&modulus.gmp);
+        let b_m = b.gmp.mod_floor(&modulus.gmp);
 
-        let sub_op = a_m - b_m + modulus;
-        sub_op.mod_floor(modulus)
+        let sub_op = a_m - b_m + &modulus.gmp;
+        sub_op.mod_floor(&modulus.gmp).wrap()
     }
 
     fn mod_add(a: &Self, b: &Self, modulus: &Self) -> Self {
-        (a.mod_floor(modulus) + b.mod_floor(modulus)).mod_floor(modulus)
+        (a.gmp.mod_floor(&modulus.gmp) + b.gmp.mod_floor(&modulus.gmp))
+            .mod_floor(&modulus.gmp)
+            .wrap()
     }
 
-    fn mod_inv(a: &Self, modulus: &Self) -> Self {
-        a.invert(modulus).unwrap()
-    }
-}
-
-impl Samplable for Mpz {
-    fn sample_below(upper: &Self) -> Self {
-        assert!(upper > &Mpz::zero());
-
-        let bits = upper.bit_length();
-        loop {
-            let n = Self::sample(bits);
-            if n < *upper {
-                return n;
-            }
-        }
+    fn mod_inv(a: &Self, modulus: &Self) -> Option<Self> {
+        Some(a.gmp.invert(&modulus.gmp)?.wrap())
     }
 
-    fn sample_range(lower: &Self, upper: &Self) -> Self {
-        assert!(upper > lower);
-        lower + Self::sample_below(&(upper - lower))
-    }
-
-    fn strict_sample_range(lower: &Self, upper: &Self) -> Self {
-        assert!(upper > lower);
-        loop {
-            let n = lower + Self::sample_below(&(upper - lower));
-            if n > *lower && n < *upper {
-                return n;
-            }
-        }
-    }
-
-    fn sample(bit_size: usize) -> Self {
-        let bytes = (bit_size - 1) / 8 + 1;
-        let mut buf: Vec<u8> = vec![0; bytes];
-        rand::thread_rng().fill_bytes(&mut buf);
-        Self::from(&*buf) >> (bytes * 8 - bit_size)
-    }
-
-    fn strict_sample(bit_size: usize) -> Self {
-        loop {
-            let n = Self::sample(bit_size);
-            if n.bit_length() == bit_size {
-                return n;
-            }
-        }
+    fn modulus(&self, modulus: &Self) -> Self {
+        self.gmp.modulus(&modulus.gmp).wrap()
     }
 }
 
-impl NumberTests for Mpz {
+impl NumberTests for BigInt {
     fn is_zero(me: &Self) -> bool {
-        me.is_zero()
-    }
-    fn is_even(me: &Self) -> bool {
-        me.is_multiple_of(&Mpz::from(2))
+        me.gmp.is_zero()
     }
     fn is_negative(me: &Self) -> bool {
-        me < &Mpz::from(0)
+        matches!(me.gmp.sign(), Sign::Negative)
     }
 }
 
-impl EGCD for Mpz {
+impl EGCD for BigInt {
+    #[allow(clippy::many_single_char_names)]
     fn egcd(a: &Self, b: &Self) -> (Self, Self, Self) {
-        a.gcdext(b)
+        let (s, p, q) = a.gmp.gcdext(&b.gmp);
+        (s.wrap(), p.wrap(), q.wrap())
     }
 }
 
-impl BitManipulation for Mpz {
+impl BitManipulation for BigInt {
     fn set_bit(&mut self, bit: usize, bit_val: bool) {
         if bit_val {
-            self.setbit(bit);
+            self.gmp.setbit(bit);
         } else {
-            self.clrbit(bit);
+            self.gmp.clrbit(bit);
         }
     }
 
     fn test_bit(&self, bit: usize) -> bool {
-        self.tstbit(bit)
+        self.gmp.tstbit(bit)
+    }
+
+    fn bit_length(&self) -> usize {
+        self.gmp.bit_length()
     }
 }
 
-impl ConvertFrom<Mpz> for u64 {
-    fn _from(x: &Mpz) -> u64 {
-        let foo: Option<u64> = x.into();
-        foo.unwrap()
+impl Integer for BigInt {
+    fn div_floor(&self, other: &Self) -> Self {
+        self.gmp.div_floor(&other.gmp).wrap()
+    }
+
+    fn mod_floor(&self, other: &Self) -> Self {
+        self.gmp.mod_floor(&other.gmp).wrap()
+    }
+
+    fn gcd(&self, other: &Self) -> Self {
+        self.gmp.gcd(&other.gmp).wrap()
+    }
+
+    fn lcm(&self, other: &Self) -> Self {
+        self.gmp.lcm(&other.gmp).wrap()
+    }
+
+    fn divides(&self, other: &Self) -> bool {
+        self.gmp.divides(&other.gmp)
+    }
+
+    fn is_multiple_of(&self, other: &Self) -> bool {
+        self.gmp.is_multiple_of(&other.gmp)
+    }
+
+    fn is_even(&self) -> bool {
+        self.gmp.is_multiple_of(&Mpz::from(2))
+    }
+
+    fn is_odd(&self) -> bool {
+        !self.gmp.is_multiple_of(&Mpz::from(2))
+    }
+
+    fn div_rem(&self, other: &Self) -> (Self, Self) {
+        let n = self / other;
+        let m = self % other;
+        (n, m)
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::Converter;
-    use super::Modulo;
-    use super::Mpz;
-    use super::Samplable;
-
-    use std::cmp;
-
-    #[test]
-    #[should_panic]
-    fn sample_below_zero_test() {
-        Mpz::sample_below(&Mpz::from(-1));
+impl Roots for BigInt {
+    fn nth_root(&self, n: u32) -> Self {
+        self.gmp.root(n).wrap()
     }
 
-    #[test]
-    fn sample_below_test() {
-        let upper_bound = Mpz::from(10);
+    fn sqrt(&self) -> Self {
+        self.gmp.sqrt().wrap()
+    }
+}
 
-        for _ in 1..100 {
-            let r = Mpz::sample_below(&upper_bound);
-            assert!(r < upper_bound);
+impl fmt::Display for BigInt {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.gmp.fmt(f)
+    }
+}
+
+impl fmt::Debug for BigInt {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.gmp.fmt(f)
+    }
+}
+
+macro_rules! impl_try_from {
+    ($($primitive:ty),*$(,)?) => {
+        $(
+        impl TryFrom<&BigInt> for $primitive {
+            type Error = TryFromBigIntError;
+
+            fn try_from(value: &BigInt) -> Result<Self, Self::Error> {
+                Option::<$primitive>::from(&value.gmp)
+                    .ok_or(TryFromBigIntError { type_name: stringify!($primitive) })
+            }
         }
+        )*
+    };
+}
+
+impl_try_from! { u64, i64 }
+
+#[allow(deprecated)]
+impl ConvertFrom<BigInt> for u64 {
+    fn _from(x: &BigInt) -> u64 {
+        let opt_x: Option<u64> = (&x.gmp).into();
+        opt_x.unwrap()
+    }
+}
+
+crate::__bigint_impl_ops! {
+    Add add,
+    Sub sub,
+    Mul mul,
+    Div div,
+    Rem rem,
+    BitAnd bitand,
+    BitXor bitxor,
+    Shl shl usize,
+    Shr shr usize,
+
+    Add add u64 [swap],
+    Sub sub u64 [swap],
+    Mul mul u64 [swap],
+    Div div u64,
+    Rem rem u64,
+}
+
+crate::__bigint_impl_assigns! {
+    AddAssign add_assign,
+    AddAssign add_assign u64,
+    BitAndAssign bitand_assign,
+    BitOrAssign bitor_assign,
+    BitXorAssign bitxor_assign,
+    DivAssign div_assign,
+    DivAssign div_assign u64,
+    MulAssign mul_assign,
+    MulAssign mul_assign u64,
+    RemAssign rem_assign,
+    RemAssign rem_assign u64,
+    ShlAssign shl_assign usize,
+    ShrAssign shr_assign usize,
+    SubAssign sub_assign,
+    SubAssign sub_assign u64,
+}
+
+impl ops::Neg for BigInt {
+    type Output = BigInt;
+    fn neg(self) -> Self::Output {
+        self.gmp.neg().wrap()
+    }
+}
+impl ops::Neg for &BigInt {
+    type Output = BigInt;
+    fn neg(self) -> Self::Output {
+        (&self.gmp).neg().wrap()
+    }
+}
+
+impl Zero for BigInt {
+    fn zero() -> Self {
+        Mpz::zero().wrap()
     }
 
-    #[test]
-    #[should_panic]
-    fn invalid_range_test() {
-        Mpz::sample_range(&Mpz::from(10), &Mpz::from(9));
+    fn is_zero(&self) -> bool {
+        self.gmp.is_zero()
     }
+}
 
-    #[test]
-    fn sample_range_test() {
-        let upper_bound = Mpz::from(10);
-        let lower_bound = Mpz::from(5);
-
-        for _ in 1..100 {
-            let r = Mpz::sample_range(&lower_bound, &upper_bound);
-            assert!(r < upper_bound && r >= lower_bound);
-        }
+impl One for BigInt {
+    fn one() -> Self {
+        Mpz::one().wrap()
     }
-
-    #[test]
-    fn strict_sample_range_test() {
-        let len = 249;
-
-        for _ in 1..100 {
-            let a = Mpz::sample(len);
-            let b = Mpz::sample(len);
-            let lower_bound = cmp::min(a.clone(), b.clone());
-            let upper_bound = cmp::max(a.clone(), b.clone());
-
-            let r = Mpz::strict_sample_range(&lower_bound, &upper_bound);
-            assert!(r < upper_bound && r >= lower_bound);
-        }
+    fn is_one(&self) -> bool {
+        self.gmp.is_one()
     }
+}
 
-    #[test]
-    fn strict_sample_test() {
-        let len = 249;
+crate::__bigint_impl_from! { u32, i32, u64 }
 
-        for _ in 1..100 {
-            let a = Mpz::strict_sample(len);
-            assert_eq!(a.bit_length(), len);
-        }
+impl From<u16> for BigInt {
+    fn from(n: u16) -> Self {
+        BigInt::from(u64::from(n))
     }
+}
 
-    //test mod_sub: a-b mod n where a-b >0
-    #[test]
-    fn test_mod_sub_modulo() {
-        let a = Mpz::from(10);
-        let b = Mpz::from(5);
-        let modulo = Mpz::from(3);
-        let res = Mpz::from(2);
-        assert_eq!(res, Mpz::mod_sub(&a, &b, &modulo));
-    }
-
-    //test mod_sub: a-b mod n where a-b <0
-    #[test]
-    fn test_mod_sub_negative_modulo() {
-        let a = Mpz::from(5);
-        let b = Mpz::from(10);
-        let modulo = Mpz::from(3);
-        let res = Mpz::from(1);
-        assert_eq!(res, Mpz::mod_sub(&a, &b, &modulo));
-    }
-
-    #[test]
-    fn test_mod_mul() {
-        let a = Mpz::from(4);
-        let b = Mpz::from(5);
-        let modulo = Mpz::from(3);
-        let res = Mpz::from(2);
-        assert_eq!(res, Mpz::mod_mul(&a, &b, &modulo));
-    }
-
-    #[test]
-    fn test_mod_pow() {
-        let a = Mpz::from(2);
-        let b = Mpz::from(3);
-        let modulo = Mpz::from(3);
-        let res = Mpz::from(2);
-        assert_eq!(res, Mpz::mod_pow(&a, &b, &modulo));
-    }
-
-    #[test]
-    fn test_to_hex() {
-        let b = Mpz::from(11);
-        assert_eq!("b", b.to_hex());
-    }
-
-    #[test]
-    fn test_from_hex() {
-        let a = Mpz::from(11);
-        assert_eq!(Mpz::from_hex(&a.to_hex()), a);
+/// Internal helper trait. Creates short-hand for wrapping Mpz into BigInt.
+trait Wrap {
+    fn wrap(self) -> BigInt;
+}
+impl Wrap for Mpz {
+    fn wrap(self) -> BigInt {
+        BigInt { gmp: self }
     }
 }

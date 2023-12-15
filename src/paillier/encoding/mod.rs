@@ -2,8 +2,8 @@
 
 use std::marker::PhantomData;
 
-use crate::curv::arithmetic::traits::ConvertFrom;
-use crate::curv::BigInt;
+use crate::curv::arithmetic::traits::*;
+use crate::curv::arithmetic::BigInt;
 pub mod integral;
 
 /// Encrypted message with type information.

@@ -10,7 +10,8 @@
 /// r is 256bit blinding factor, m is the commited value
 pub struct HashCommitment;
 
-use crate::curv::BigInt;
+use crate::curv::arithmetic::traits::*;
+use crate::curv::arithmetic::BigInt;
 
 use super::traits::Commitment;
 use super::SECURITY_BITS;
@@ -23,11 +24,11 @@ impl Commitment<BigInt> for HashCommitment {
         blinding_factor: &BigInt,
     ) -> BigInt {
         let mut digest = Sha3_256::new();
-        let bytes_message: Vec<u8> = message.into();
+        let bytes_message: Vec<u8> = message.to_bytes();
         digest.update(&bytes_message);
-        let bytes_blinding_factor: Vec<u8> = blinding_factor.into();
+        let bytes_blinding_factor: Vec<u8> = blinding_factor.to_bytes();
         digest.update(&bytes_blinding_factor);
-        BigInt::from(digest.finalize().as_ref())
+        BigInt::from_bytes(digest.finalize().as_ref())
     }
 
     fn create_commitment(message: &BigInt) -> (BigInt, BigInt) {
@@ -46,7 +47,7 @@ mod tests {
     use super::HashCommitment;
     use super::SECURITY_BITS;
     use crate::curv::arithmetic::traits::Samplable;
-    use crate::curv::BigInt;
+    use crate::curv::arithmetic::BigInt;
     use sha3::{Digest, Sha3_256};
 
     #[test]

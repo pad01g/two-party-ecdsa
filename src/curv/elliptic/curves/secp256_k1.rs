@@ -20,7 +20,7 @@ use super::traits::{ECPoint, ECScalar};
 use crate::curv::arithmetic::traits::{Converter, Modulo};
 use crate::curv::cryptographic_primitives::hashing::hash_sha256::HSha256;
 use crate::curv::cryptographic_primitives::hashing::traits::Hash;
-use crate::curv::BigInt;
+use crate::curv::arithmetic::BigInt;
 use crate::curv::ErrorKey;
 use rand::{thread_rng, Rng};
 use secp256k1::constants::{
@@ -75,7 +75,7 @@ impl Secp256k1Point {
         let hash = HSha256::create_hash(&[&g.bytes_compressed_to_big_int()]);
         let hash = HSha256::create_hash(&[&hash]);
         let hash = HSha256::create_hash(&[&hash]);
-        let mut hash_vec = BigInt::to_vec(&hash);
+        let mut hash_vec = hash.to_bytes();
         let mut template: Vec<u8> = vec![2];
         template.append(&mut hash_vec);
         Secp256k1Point {
@@ -123,7 +123,7 @@ impl ECScalar<SK> for Secp256k1Scalar {
     fn from(n: &BigInt) -> Secp256k1Scalar {
         let curve_order = FE::q();
         let n_reduced = BigInt::mod_add(n, &BigInt::from(0), &curve_order);
-        let mut v = BigInt::to_vec(&n_reduced);
+        let mut v = n_reduced.to_bytes();
 
         if v.len() < SECRET_KEY_SIZE {
             let mut template = vec![0; SECRET_KEY_SIZE - v.len()];
@@ -138,11 +138,11 @@ impl ECScalar<SK> for Secp256k1Scalar {
     }
 
     fn to_big_int(&self) -> BigInt {
-        BigInt::from(&(self.fe[0..self.fe.len()]))
+        BigInt::from_bytes(&(self.fe[0..self.fe.len()]))
     }
 
     fn q() -> BigInt {
-        BigInt::from(CURVE_ORDER.as_ref())
+        BigInt::from_bytes(CURVE_ORDER.as_ref())
     }
 
     fn add(&self, other: &SK) -> Secp256k1Scalar {
@@ -189,7 +189,7 @@ impl ECScalar<SK> for Secp256k1Scalar {
 
     fn invert(&self) -> Secp256k1Scalar {
         let bignum = self.to_big_int();
-        let bn_inv = bignum.invert(&FE::q()).unwrap();
+        let bn_inv = BigInt::mod_inv(&bignum, &FE::q()).unwrap();
         ECScalar::from(&bn_inv)
     }
 }
@@ -295,21 +295,21 @@ impl ECPoint<PK, SK> for Secp256k1Point {
     /// 3) call from_bytes
     fn bytes_compressed_to_big_int(&self) -> BigInt {
         let serial = self.ge.serialize();
-        BigInt::from(&serial[0..33])
+        BigInt::from_bytes(&serial[0..33])
     }
 
     fn x_coor(&self) -> Option<BigInt> {
         let serialized_pk = PK::serialize_uncompressed(&self.ge);
         let x = &serialized_pk[1..serialized_pk.len() / 2 + 1];
         let x_vec = x.to_vec();
-        Some(BigInt::from(&x_vec[..]))
+        Some(BigInt::from_bytes(&x_vec[..]))
     }
 
     fn y_coor(&self) -> Option<BigInt> {
         let serialized_pk = PK::serialize_uncompressed(&self.ge);
         let y = &serialized_pk[(serialized_pk.len() - 1) / 2 + 1..serialized_pk.len()];
         let y_vec = y.to_vec();
-        Some(BigInt::from(&y_vec[..]))
+        Some(BigInt::from_bytes(&y_vec[..]))
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Secp256k1Point, ErrorKey> {
@@ -372,8 +372,8 @@ impl ECPoint<PK, SK> for Secp256k1Point {
     fn pk_to_key_slice(&self) -> Vec<u8> {
         let mut v = vec![4u8];
 
-        v.extend(BigInt::to_vec(&self.x_coor().unwrap()));
-        v.extend(BigInt::to_vec(&self.y_coor().unwrap()));
+        v.extend(BigInt::to_bytes(&self.x_coor().unwrap()));
+        v.extend(BigInt::to_bytes(&self.y_coor().unwrap()));
         v
     }
 
@@ -402,13 +402,13 @@ impl ECPoint<PK, SK> for Secp256k1Point {
             255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
             255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 254, 255, 255, 252, 47,
         ];
-        let order = BigInt::from(&p[..]);
+        let order = BigInt::from_bytes(&p[..]);
         let x = point.x_coor().unwrap();
         let y = point.y_coor().unwrap();
         let minus_y = BigInt::mod_sub(&order, &y, &order);
 
-        let x_vec = BigInt::to_vec(&x);
-        let y_vec = BigInt::to_vec(&minus_y);
+        let x_vec = x.to_bytes();
+        let y_vec = minus_y.to_bytes();
 
         let mut template_x = vec![0; 32 - x_vec.len()];
         template_x.extend_from_slice(&x_vec);
@@ -426,8 +426,8 @@ impl ECPoint<PK, SK> for Secp256k1Point {
     }
 
     fn from_coor(x: &BigInt, y: &BigInt) -> Secp256k1Point {
-        let mut vec_x = BigInt::to_vec(x);
-        let mut vec_y = BigInt::to_vec(y);
+        let mut vec_x = x.to_bytes();
+        let mut vec_y = y.to_bytes();
         let coor_size = (UNCOMPRESSED_PUBLIC_KEY_SIZE - 1) / 2;
 
         if vec_x.len() < coor_size {
@@ -444,8 +444,8 @@ impl ECPoint<PK, SK> for Secp256k1Point {
             vec_y = y_buffer
         }
 
-        assert_eq!(x, &BigInt::from(vec_x.as_ref()));
-        assert_eq!(y, &BigInt::from(vec_y.as_ref()));
+        assert_eq!(x, &BigInt::from_bytes(vec_x.as_ref()));
+        assert_eq!(y, &BigInt::from_bytes(vec_y.as_ref()));
 
         let mut v = vec![4u8];
         v.extend(vec_x);
@@ -546,8 +546,8 @@ impl<'de> Visitor<'de> for Secp256k1PointVisitor {
             }
         }
 
-        let bx = BigInt::from_hex(&x);
-        let by = BigInt::from_hex(&y);
+        let bx = BigInt::from_hex(&x).unwrap();
+        let by = BigInt::from_hex(&y).unwrap();
 
         Ok(Secp256k1Point::from_coor(&bx, &by))
     }

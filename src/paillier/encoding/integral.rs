@@ -6,7 +6,8 @@ use std::marker::PhantomData;
 
 use super::{pack, unpack, EncodedCiphertext};
 use crate::curv::arithmetic::traits::*;
-use crate::paillier::{BigInt, Paillier, RawCiphertext, RawPlaintext};
+use crate::paillier::{Paillier, RawCiphertext, RawPlaintext};
+use crate::curv::arithmetic::BigInt;
 
 impl<EK> Encrypt<EK, u64, EncodedCiphertext<u64>> for Paillier
 where
