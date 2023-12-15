@@ -26,12 +26,6 @@ num-integer = "0.1"
 lazy_static = "1.4"
 hex = { version = "0.4", features = ["serde"] }
 
-
-[dependencies.rust-gmp]
-version = "0.5.0"
-features = ["serde_support"]
-git = "https://github.com/KZen-networks/rust-gmp"
-
 [dependencies.secp256k1]
 version = "0.21.0"
 features = ["rand", "serde"]
