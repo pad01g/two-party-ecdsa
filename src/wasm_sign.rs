@@ -1,5 +1,4 @@
 use crate::curv::arithmetic::traits::*;
-use crate::curv::elliptic::curves::traits::*;
 use crate::curv::arithmetic::BigInt;
 use crate::*;
 
@@ -11,8 +10,6 @@ use crate::party_two::PartialSig;
 use crate::party_two::EphCommWitness;
 
 use crate::party_one::EphKeyGenFirstMsg as Party1EphKeyGenFirstMsg;
-use crate::party_one::KeyGenFirstMsg as Party1KeyGenFirstMsg;
-use crate::party_one::KeyGenSecondMsg as Party1KeyGenSecondMsg;
 use crate::party_one::EphEcKeyPair as Party1EphEcKeyPair;
 use crate::party_one::EcKeyPair as Party1EcKeyPair;
 use crate::party_one::PaillierKeyPair;
@@ -158,7 +155,7 @@ pub fn sign_party_two_second(input: String) -> String {
 pub fn sign_party_one_second(input: String) -> String {
     let party_one_second_input: SignPartyOneSecondInput = serde_json::from_str(&input).unwrap();
 
-    let eph_party_one_second_message =
+    let _eph_party_one_second_message =
         party_one::EphKeyGenSecondMsg::verify_commitments_and_dlog_proof(
             &party_one_second_input.eph_party_two_first_message,
             &party_one_second_input.eph_party_two_second_message,

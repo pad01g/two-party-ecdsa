@@ -13,7 +13,7 @@
 
     @license GPL-3.0+ <https://github.com/KZen-networks/zk-paillier/blob/master/LICENSE>
 */
-use crate::curv::arithmetic::traits::{Modulo, Samplable, One, Zero, BasicOps, Converter, Integer};
+use crate::curv::arithmetic::traits::{Modulo, Samplable, One, Zero, BasicOps, Converter};
 use crate::curv::arithmetic::BigInt;
 use crate::paillier::{
     EncryptWithChosenRandomness, EncryptionKey, Paillier, Randomness, RawPlaintext,

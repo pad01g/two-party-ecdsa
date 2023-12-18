@@ -3,23 +3,15 @@ use crate::curv::elliptic::curves::traits::*;
 use crate::curv::arithmetic::BigInt;
 use crate::*;
 
-use crate::party_two::EphKeyGenFirstMsg as Party2EphKeyGenFirstMsg;
-use crate::party_two::EphKeyGenSecondMsg as Party2EphKeyGenSecondMsg;
-use crate::party_two::EphEcKeyPair as Party2EphEcKeyPair;
 use crate::party_two::EcKeyPair as Party2EcKeyPair;
-use crate::party_two::PartialSig;
-use crate::party_two::EphCommWitness;
 use crate::party_two::PaillierPublic;
 use crate::party_two::KeyGenSecondMsg as Party2KeyGenSecondMsg;
 use crate::party_two::KeyGenFirstMsg as Party2KeyGenFirstMsg;
 
-use crate::party_one::EphKeyGenFirstMsg as Party1EphKeyGenFirstMsg;
 use crate::party_one::KeyGenFirstMsg as Party1KeyGenFirstMsg;
 use crate::party_one::KeyGenSecondMsg as Party1KeyGenSecondMsg;
-use crate::party_one::EphEcKeyPair as Party1EphEcKeyPair;
 use crate::party_one::EcKeyPair as Party1EcKeyPair;
 use crate::party_one::PaillierKeyPair;
-use crate::party_one::Signature;
 use crate::party_one::Party1Private;
 use crate::party_one::CommWitness;
 

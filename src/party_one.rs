@@ -21,7 +21,6 @@ use std::cmp;
 use std::ops::Shl;
 
 use super::SECURITY_BITS;
-pub use crate::curv::arithmetic::traits::*;
 
 use crate::curv::elliptic::curves::traits::*;
 
@@ -237,11 +236,6 @@ impl KeyGenSecondMsg {
         DLogProof::verify(proof)?;
         Ok(KeyGenSecondMsg { comm_witness })
     }
-}
-
-#[wasm_bindgen]
-pub fn greet(name: &str) {
-    let x = (&format!("Hello, {}!", name));
 }
 
 pub fn compute_pubkey(party_one_private: &Party1Private, other_share_public_share: &GE) -> GE {
