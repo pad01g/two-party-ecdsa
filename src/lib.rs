@@ -25,6 +25,8 @@ pub mod paillier;
 pub mod party_one;
 pub mod party_two;
 pub mod zk_paillier;
+pub mod wasm_keygen;
+pub mod wasm_sign;
 
 mod test;
 
