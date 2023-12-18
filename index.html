@@ -1,0 +1,140 @@
+<!--
+    run by `python3 -m http.server --directory ./`
+-->
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8" />
+    <title>hello-wasm example</title>
+  </head>
+  <body>
+    <script type="module">
+        import init, {
+            keygen_party_one_first,
+            keygen_party_two_first,
+            keygen_party_one_second,
+            keygen_party_two_second,
+            keygen_party_one_third,
+            keygen_party_two_third,
+            keygen_party_one_fourth,
+            keygen_party_two_fourth,
+            sign_party_two_first,
+            sign_party_one_first,
+            sign_party_two_second,
+            sign_party_one_second,
+            sign_party_two_third,
+            sign_party_one_third,
+        } from "./pkg/two_party_ecdsa.js";
+
+        init().then(() => {
+            // keygen
+            const keygen_party_one_first_result = JSON.parse(keygen_party_one_first(JSON.stringify({
+                secret: "abcd"
+            })));
+            const keygen_party_two_first_result = JSON.parse(keygen_party_two_first(JSON.stringify({
+                secret: "ef01"
+            })));
+
+            console.log(JSON.stringify({
+                keygen_party_one_first_result,
+                keygen_party_two_first_result
+            }))
+            
+            const keygen_party_one_second_result = JSON.parse(keygen_party_one_second(JSON.stringify({
+                comm_witness: keygen_party_one_first_result.comm_witness,
+                party_two_first_message: keygen_party_two_first_result.party_two_first_message,
+            })));
+
+            const keygen_party_two_second_result = JSON.parse(keygen_party_two_second(JSON.stringify({
+                party_one_first_message: keygen_party_one_first_result.party_one_first_message,
+                party_one_second_message: keygen_party_one_second_result.party_one_second_message
+            })));
+
+            console.log(JSON.stringify({
+                keygen_party_one_second_result,
+                keygen_party_two_second_result
+            }))
+
+            const keygen_party_one_third_result = JSON.parse(keygen_party_one_third(JSON.stringify({
+                ec_key_pair_party1: keygen_party_one_first_result.ec_key_pair_party1
+            })));
+
+            const keygen_party_two_third_result = JSON.parse(keygen_party_two_third(JSON.stringify({
+                paillier_key_pair: keygen_party_one_third_result.paillier_key_pair,
+                correct_key_proof: keygen_party_one_third_result.correct_key_proof,
+            })));
+
+
+            console.log(JSON.stringify({
+                keygen_party_one_third_result,
+                keygen_party_two_third_result
+            }))
+
+
+            const keygen_party_one_fourth_result = JSON.parse(keygen_party_one_fourth(JSON.stringify({
+                paillier_key_pair: keygen_party_one_third_result.paillier_key_pair,
+                party_one_private: keygen_party_one_third_result.party_one_private,
+            })));
+
+
+            console.log(JSON.stringify({
+                keygen_party_one_fourth_result,
+            }))
+
+            const keygen_party_two_fourth_result = JSON.parse(keygen_party_two_fourth(JSON.stringify({
+                party_two_paillier: keygen_party_two_third_result.party_two_paillier,
+                range_proof: keygen_party_one_fourth_result.range_proof,
+            })));
+
+            console.log(JSON.stringify({
+                keygen_party_two_fourth_result
+            }))
+
+            //sign
+
+            const sign_party_two_first_result = JSON.parse(sign_party_two_first());
+            const sign_party_one_first_result = JSON.parse(sign_party_one_first());
+            console.log(JSON.stringify({
+                sign_party_two_first_result,
+                sign_party_one_first_result
+            }))
+
+            const sign_party_two_second_result = JSON.parse(sign_party_two_second(JSON.stringify({
+                eph_comm_witness: sign_party_two_first_result.eph_comm_witness,
+                eph_party_one_first_message: sign_party_one_first_result.eph_party_one_first_message,
+            })));
+            const sign_party_one_second_result = JSON.parse(sign_party_one_second(JSON.stringify({
+                eph_party_two_first_message: sign_party_two_first_result.eph_party_two_first_message,
+                eph_party_two_second_message: sign_party_two_second_result.eph_party_two_second_message,
+            })));
+            console.log(JSON.stringify({
+                sign_party_two_second_result,
+                sign_party_one_second_result
+            }))
+
+            const sign_party_two_third_result = JSON.parse(sign_party_two_third(JSON.stringify({
+                ec_key_pair_party2: keygen_party_two_first_result.ec_key_pair_party2,
+                ek: keygen_party_one_third_result.paillier_key_pair.ek,
+                encrypted_share: keygen_party_one_third_result.paillier_key_pair.encrypted_share,
+                eph_ec_key_pair_party2: sign_party_two_first_result.eph_ec_key_pair_party2,
+                eph_party_one_first_message: sign_party_one_first_result.eph_party_one_first_message,
+                message: "abcd9876543210",
+            })));
+            const sign_party_one_third_result = JSON.parse(sign_party_one_third(JSON.stringify({
+                ec_key_pair_party1: keygen_party_one_first_result.ec_key_pair_party1,
+                keypair: keygen_party_one_third_result.paillier_key_pair,
+                partial_sig_c3: sign_party_two_third_result.partial_sig.c3,
+                eph_ec_key_pair_party1: sign_party_one_first_result.eph_ec_key_pair_party1,
+                witness_public_share: sign_party_two_second_result.eph_party_two_second_message.comm_witness.public_share,
+                public_share: keygen_party_two_first_result.party_two_first_message.public_share,
+                message: "abcd9876543210",
+            })));
+            console.log(JSON.stringify({
+                sign_party_two_third_result,
+                sign_party_one_third_result
+            }))
+        });
+
+    </script>
+  </body>
+</html>
